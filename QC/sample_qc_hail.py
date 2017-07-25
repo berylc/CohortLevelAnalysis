@@ -41,4 +41,7 @@ ibd_calculations = vds_gnomad_filters.ibd(min = 0.2)
 ibd_calculations_gnomad.export("gs://gnomad-berylc/output/ibd.calculations.on.filtered.data.gnomadfilters.072517.tsv”)
 
 #Removing samples manually
-
+relatedness = hc.import_table("gs://gnomad-berylc/samples_filter_relatedness.after.initial.qc.072517.txt", no_header=True).key_by('f0')
+vds_filtered = vds.filter_samples_table(to_remove_relatedness, keep = False)
+#This leaves 14,285 samples
+#vds_filtered.write("gs://gnomad-berylc/filtered.MYOSEQ.sex.qc.relatedness.vds")
