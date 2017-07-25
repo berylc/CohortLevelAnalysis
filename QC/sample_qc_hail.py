@@ -22,11 +22,11 @@ vds = vds.filter_samples_expr('sa.qc.dpMean > 15 && sa.qc.callRate > 0.9 && sa.q
 
 #Filter based on sex imputation
 vds = vds.filter_samples_expr('sa.imputesex.Fstat > -0.3', keep = True)
-vds = vds.filter_samples_expr('sa.imputesex.Fstat > 0.35 && sa.imputesex.Fstat < 0.5, keep = False)
+vds = vds.filter_samples_expr('sa.imputesex.Fstat > 0.35 && sa.imputesex.Fstat < 0.5', keep = False)
 #First filters 106 samples, second filters 6, can make these stricter in later iterations
 
 #Filter three additional MyoSeq samples where the sex in ped does not match inferred sex
-sex_in_ped_inconsistent = c["MKHA009", "MTEH052","MVAL013","MVAL012"]
+sex_in_ped_inconsistent = ["MKHA009", "MTEH052","MVAL013","MVAL012"]
 vds = vds.filter_samples_list(sex_in_ped_inconsistent, keep = False)
 
 #This leaves 14,567 samples
