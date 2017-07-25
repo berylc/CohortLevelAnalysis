@@ -4,12 +4,14 @@ from collections import Counter
 from math import log, isnan
 from pprint import pprint
 from hail import *
+
 hc = HailContext()
 vds = hc.read("gs://gnomad-berylc/MYOSEQ.vds/")
 vds = vds.split_multi()
+
 table = hc.import_table('gs://gnomad-berylc/MYOSEQ.annotations.tsv', impute= True).key_by('Sample')
 vds = vds.annotate_samples_table(table, root='sa')
-vds = vds.sample_qc().impute(sex)
+vds = vds.sample_qc().impute_sex()
 
 #Export metrics to plot
 #vds.export_samples("gs://gnomad-berylc/output/sample_qc.tsv", 'Sample = s, sa.qc.*, sa.imputesex.*')
@@ -29,9 +31,9 @@ vds = vds.filter_samples_list(sex_in_ped_inconsistent, keep = False)
 
 #This leaves 14,567 samples
 
-#Calculate relatedness on autosomal biallelic variants w/ > 99% call rate > 1% AF. Since we already split multiallelic, re-reading in vds
-vds_gnomad_filters = hc.read("gs://gnomad-berylc/MYOSEQ.vds/")
-vds_gnomad_filters = vds_gnomad_filters.filter_multi().filter_variants_expr('v.contig != "X" && v.contig != "Y" && v.contig != "MT" ')
+#Calculate relatedness on autosomal biallelic variants w/ > 99% call rate > 1% AF. Since we already split multiallelic, we need to remove split variants
+vds_gnomad_filters = vds.filter_variants_expr('va.wasSplit', keep = False)
+vds_gnomad_filters = vds_gnomad_filters.filter_variants_expr('v.contig != "X" && v.contig != "Y" && v.contig != "MT" ')
 vds_gnomad_filters = vds.variant_qc().cache()
 
 vds_gnomad_filters = vds_gnomad_filters.filter_variants_expr('va.qc.callRate > 0.99 && va.qc.AF > 0.01' , keep = True).ld_prune(r2 = 0.1)
