@@ -32,16 +32,21 @@ vds = vds.filter_samples_list(sex_in_ped_inconsistent, keep = False)
 #This leaves 14,567 samples
 
 #Calculate relatedness on autosomal biallelic variants w/ > 99% call rate > 1% AF. Since we already split multiallelic, we need to remove split variants
-vds_gnomad_filters = vds.filter_variants_expr('va.wasSplit', keep = False)
-vds_gnomad_filters = vds_gnomad_filters.filter_variants_expr('v.contig != "X" && v.contig != "Y" && v.contig != "MT" ')
-vds_gnomad_filters = vds.variant_qc().cache()
+#vds_gnomad_filters = vds.filter_variants_expr('va.wasSplit', keep = False)
+#vds_gnomad_filters = vds_gnomad_filters.filter_variants_expr('v.contig != "X" && v.contig != "Y" && v.contig != "MT" ')
+#vds_gnomad_filters = vds.variant_qc().cache()
 
-vds_gnomad_filters = vds_gnomad_filters.filter_variants_expr('va.qc.callRate > 0.99 && va.qc.AF > 0.01' , keep = True).ld_prune(r2 = 0.1)
-ibd_calculations = vds_gnomad_filters.ibd(min = 0.2)
-ibd_calculations_gnomad.export("gs://gnomad-berylc/output/ibd.calculations.on.filtered.data.gnomadfilters.072517.tsv”)
+#vds_gnomad_filters = vds_gnomad_filters.filter_variants_expr('va.qc.callRate > 0.99 && va.qc.AF > 0.01' , keep = True).ld_prune(r2 = 0.1)
+#ibd_calculations = vds_gnomad_filters.ibd(min = 0.2)
+#ibd_calculations_gnomad.export("gs://gnomad-berylc/output/ibd.calculations.on.filtered.data.gnomadfilters.072517.tsv”)
 
 #Removing samples manually
-relatedness = hc.import_table("gs://gnomad-berylc/samples_filter_relatedness.after.initial.qc.072517.txt", no_header=True).key_by('f0')
-vds_filtered = vds.filter_samples_table(to_remove_relatedness, keep = False)
+to_remove_relatedness = hc.import_table("gs://gnomad-berylc/samples_filter_relatedness.after.initial.qc.072517.txt", no_header=True).key_by('f0')
+vds = vds.filter_samples_table(to_remove_relatedness, keep = False)
 #This leaves 14,285 samples
-#vds_filtered.write("gs://gnomad-berylc/filtered.MYOSEQ.sex.qc.relatedness.vds")
+#vds.write("gs://gnomad-berylc/filtered.MYOSEQ.sex.qc.relatedness.vds")
+
+#Filter to only European individuals 
+to_keep_europeans = hc.import_table("gs://gnomad-berylc/samples_keep_european.tsv", no_header=True).key_by("f0")
+vds = vds.filter_samples_table(to_keep_europeans, keep = True)
+#This leaves 13,909 samples
