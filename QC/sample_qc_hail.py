@@ -41,28 +41,27 @@ vds = vds.variant_qc().cache()
 #vds.export_samples("gs://gnomad-berylc/output/sample_qc_081417.tsv", 'Sample = s, sa.qc.*, sa.imputesex.*,  CovY =  sa.CovY, Cov20 = sa.Cov20, NHetX = sa.NHetVarsChrX, NTotalX = sa.NVarsChrX')
 
 #Filter based on QC metrics
-vds = vds.filter_samples_expr('sa.qc.dpMean > 20 && sa.qc.dpMean < 120 && sa.qc.callRate > 0.95 && sa.qc.gqMean > 60 && sa.qc.rTiTv < 2.6 && sa.qc.rHetHomVar > 1.2 && sa.qc.rInsertionDeletion < 1')
-#This leaves 14,636 samples
+vds_filtered = vds_filtered.filter_samples_expr('sa.qc.dpMean > 20 && sa.qc.dpMean < 120 && sa.qc.callRate > 0.95 && sa.qc.gqMean > 60 && sa.qc.rTiTv < 2.6 && sa.qc.rHetHomVar > 1.2 && sa.qc.rInsertionDeletion < 1')
 
 #Filter based on sex imputation
-vds = vds.filter_samples_expr('sa.imputesex.Fstat > 0.9 || sa.imputesex.Fstat < 0.3 ', keep = True)
-vds = vds.filter_samples_expr('sa.imputesex.Fstat > -0.25 `', keep = False)
-#First filters 106 samples, second filters 6, can make these stricter in later iterations
+vds_filtered = vds_filtered.filter_samples_expr('sa.imputesex.Fstat > 0.9 || sa.imputesex.Fstat < 0.3 ', keep = True)
+vds_filtered = vds_filtered.filter_samples_expr('sa.imputesex.Fstat > -0.25', keep = True)
 
 #Filter three additional MyoSeq samples where the sex in ped does not match inferred sex
 sex_in_ped_inconsistent = ["MKHA009", "MTEH052","MVAL013","MVAL012"]
-vds = vds.filter_samples_list(sex_in_ped_inconsistent, keep = False)
+vds_filtered = vds_filtered.filter_samples_list(sex_in_ped_inconsistent, keep = False)
+#This leaves 14,586 samples
 
-#This leaves 14,567 samples
+#Calculate relatedness on autosomal variants w/ > 99% call rate > 1% AF. 
+#vds_filtered is already PASS biallelic SNPs with AF > 1%
+vds_filtered = vds_filtered.filter_variants_expr('v.contig != "X" && v.contig != "Y" && v.contig != "MT" ')
+vds_filtered = vds_filtered = vds_filtered.variant_qc().cache()
+vds_ibd = vds_filtered.filter_variants_expr('va.qc.callRate > 0.99' , keep = True).ld_prune(r2 = 0.1)
+ibd_calculations = vds_ibd.ibd(min = 0.2)
 
-#Calculate relatedness on autosomal biallelic variants w/ > 99% call rate > 1% AF. Since we already split multiallelic, we need to remove split variants
-#vds_gnomad_filters = vds.filter_variants_expr('va.wasSplit', keep = False)
-#vds_gnomad_filters = vds_gnomad_filters.filter_variants_expr('v.contig != "X" && v.contig != "Y" && v.contig != "MT" ')
-#vds_gnomad_filters = vds.variant_qc().cache()
+#Write out IBD calculations
+ibd_calculations.export("gs://gnomad-berylc/output/ibd.calculations.on.filtered.data.gnomadfilters.081417.tsv")
 
-#vds_gnomad_filters = vds_gnomad_filters.filter_variants_expr('va.qc.callRate > 0.99 && va.qc.AF > 0.01' , keep = True).ld_prune(r2 = 0.1)
-#ibd_calculations = vds_gnomad_filters.ibd(min = 0.2)
-#ibd_calculations_gnomad.export("gs://gnomad-berylc/output/ibd.calculations.on.filtered.data.gnomadfilters.072517.tsv”)
 
 #Removing samples manually
 to_remove_relatedness = hc.import_table("gs://gnomad-berylc/samples_filter_relatedness.after.initial.qc.072517.txt", no_header=True).key_by('f0')
