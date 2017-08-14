@@ -11,7 +11,20 @@ vds = vds.split_multi()
 
 table = hc.import_table('gs://gnomad-berylc/MYOSEQ.annotations.tsv', impute= True).key_by('Sample')
 vds = vds.annotate_samples_table(table, root='sa')
-vds = vds.sample_qc().impute_sex()
+
+#Sample and variant QC first
+vds = vds.sample_qc()
+vds = vds.variant_qc().cache()
+
+#Filter to biallelic SNPs with AF > 0.01
+vds_sex_check = vds.filter_multi()
+vds_sex_check = vds_sex_check.filter_variants_expr('va.filters.isEmpty() && va.qc.AF > 0.01 && v.altAllele.isSNP()', keep=True)
+
+#Impute sex 
+vds_sex_check = vds_sex_check.impute_sex()
+
+#Write file
+vds.export_samples("gs://gnomad-berylc/output/sample_qc_081417.tsv", 'Sample = s, sa.qc.*, sa.imputesex.*')
 
 #Export metrics to plot
 #vds.export_samples("gs://gnomad-berylc/output/sample_qc.tsv", 'Sample = s, sa.qc.*, sa.imputesex.*')
