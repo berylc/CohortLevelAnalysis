@@ -23,8 +23,24 @@ vds_sex_check = vds_sex_check.filter_variants_expr('va.filters.isEmpty() && va.q
 #Impute sex 
 vds_sex_check = vds_sex_check.impute_sex()
 
+#Also mimic gnomad sex check 
+#X heterozygosity
+vds = vds.annotate_samples_expr('sa.NVarsChrX = gs.filter(g => v.contig == "X").count()')
+vds = vds.annotate_samples_expr('sa.NHetVarsChrX = gs.filter(g => v.contig == "X" && g.isHet()).count()')
+
+#Chrom 20 coverage
+vds = vds.annotate_samples_expr('sa.Cov20 = gs.filter(g => v.contig == "20").map(g => g.dp).stats().sum')
+
+#Chrom Y coverage
+vds_y = vds.filter_variants_expr('v.contig == "Y"', keep = True)
+intervals = map(Interval.parse, ['Y:10001-2649520', 'Y:59034050-59363566'])
+vds_y = vds_y.filter_intervals(intervals, keep = False)
+vds_y = vds_y.annotate_samples_expr('sa.CovY = gs.filter(g => v.contig == "Y").map(g => g.dp).stats().sum')
+
+vds_y.count_variants()
+
 #Write file
-vds.export_samples("gs://gnomad-berylc/output/sample_qc_081417.tsv", 'Sample = s, sa.qc.*, sa.imputesex.*')
+vds.export_samples("gs://gnomad-berylc/output/sample_qc_081417.tsv", 'Sample = s, sa.qc.*, sa.imputesex.*,  CovY =  sa.CovY, Cov20 = sa.Cov20, NHetX = sa.NHetVarsChrX, NTotalX = sa.NVarsChrX')
 
 #Export metrics to plot
 #vds.export_samples("gs://gnomad-berylc/output/sample_qc.tsv", 'Sample = s, sa.qc.*, sa.imputesex.*')
